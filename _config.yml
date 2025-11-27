@@ -46,10 +46,10 @@ minima:
 
   # Social Media Links
   #   Renders icons via Font Awesome Free webfonts CDN, based on ordered list of entries.
-  #   Entry keys:
-  #     * title    Tooltip rendered on hovering over icon.
-  #     * icon     Font Awesome icon id. `github` corresponds to `fa-github`.
-  #     * url      Full URL of social profile.
+     Entry keys:
+       * title    Tooltip rendered on hovering over icon.
+       * icon     Font Awesome icon id. `github` corresponds to `fa-github`.
+       * url      Full URL of social profile.
   social_links:
     - title: Minima Theme repository at GitHub
       icon: github
