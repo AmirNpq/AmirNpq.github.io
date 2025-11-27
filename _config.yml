@@ -1,59 +1,48 @@
-title: titleee
-author:
-  name: AmirNpqx
-  email: my-email@domain.com
+name: Build and Deploy Demo Site
 
-description: >
-  Write an awesome description for your new site here. You can edit this line
-  in _config.yml. It will appear in your document head meta (for Google search
-  results) and in your feed.xml site description.
+on:
+  # Run this workflow manually from the Actions tab
+  workflow_dispatch:
 
-theme: minima
+jobs:
+  deploy_demo_site:
+    runs-on: "ubuntu-latest"
+    env:
+      BUNDLE_PATH: "vendor/bundle"
+      BUNDLE_JOBS: 4
+      BUNDLE_RETRY: 3
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          repository: jekyll/minima
+          ref: demo-site
+      - name: Set up Ruby 2.7
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+          bundler-cache: true
+      - name: Clone target branch
+        run: |
+          REMOTE_BRANCH="${REMOTE_BRANCH:-gh-pages}"
+          REMOTE_REPO="https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
 
-plugins:
-  - jekyll-feed
-  - jekyll-seo-tag
+          echo "Publishing to ${GITHUB_REPOSITORY} on branch ${REMOTE_BRANCH}"
+          rm -rf _site/
+          git clone --depth=1 --branch="${REMOTE_BRANCH}" --single-branch --no-checkout "${REMOTE_REPO}" _site/
+      - name: Build site
+        run: bundle exec jekyll build --verbose --trace
+      - name: Deploy to GitHub Pages
+        run: |
+          SOURCE_COMMIT="$(git log -1 --pretty="%an: %B" "$GITHUB_SHA")"
+          pushd _site &>/dev/null
+          : > .nojekyll
 
-sass:
-  quiet_deps: true
-  silence_deprecations: [import]
+          git add --all
+          git -c user.name="${GITHUB_ACTOR}" -c user.email="${GITHUB_ACTOR}@users.noreply.github.com" \
+            commit --quiet \
+            --message "Deploy demo-site from ${GITHUB_SHA}" \
+            --message "$SOURCE_COMMIT"
+          git push
 
-minima:
-  # Minima skin selection. Available skins are:
-  #   Available skins:
-  #     * classic            Default, light color scheme.
-  #     * dark               Dark variant of the classic skin.
-  #     * auto               Adaptive skin based on the default classic and dark skins.
-  #     * solarized-light    Light variant of solarized color scheme.
-  #     * solarized-dark     Dark variant of solarized color scheme.
-  #     * solarized          Adaptive skin for solarized color scheme skins.
-  skin: solarized-dark
-
-  # Specific pages for site navigation.
-  #   If you wish to link only specific pages in the site-navigation, use this and list
-  #   the `path` property (as represented via Liquid) of the pages in the order they
-  #   should be rendered.
-  nav_pages:
-    - about.md
-
-  # Set to `true` to show excerpts on the homepage.
-  show_excerpts: false
-
-  # Minima date format.
-  #   The default value is "%b %d, %Y" (e.g. Nov 14, 2023).
-  #   Refer to https://shopify.github.io/liquid/filters/date/ for valid values.
-  # date_format: "%b-%d-%Y"
-
-  # Social Media Links
-  #   Renders icons via Font Awesome Free webfonts CDN, based on ordered list of entries.
-  #   Entry keys:
-  #   * title    Tooltip rendered on hovering over icon.
-  #    * icon     Font Awesome icon id. `github` corresponds to `fa-github`.
-  #     * url      Full URL of social profile.
-  social_links:
-    - title: my GitHub
-      icon: github
-      url: "https://github.com/AmirNpq"
-    #   - title: Jekyll at X (formerly Twitter)
-    #    icon: x-twitter
-    #    url: "https://x.com/jekyllrb"
+          popd &>/dev/null
